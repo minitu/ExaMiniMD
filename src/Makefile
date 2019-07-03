@@ -2,14 +2,12 @@
 KOKKOS_PATH = ${HOME}/kokkos
 
 #Backend and architecture configuration
-KOKKOS_DEVICES=OpenMP
-KOKKOS_ARCH = ""
-
-#MPI On or off (1/0)
-MPI = 1
+KOKKOS_DEVICES = Cuda
+KOKKOS_ARCH = Power9,Volta70
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 EXAMINIMD_PATH = $(subst Makefile,,$(MAKEFILE_PATH))/..
+MPI_PATH = ${MPI_ROOT}
 
 default: build
 	echo "Start Build"
@@ -19,26 +17,18 @@ EXE = ExaMiniMD
 CXXFLAGS = -O3 -g
 LINKFLAGS = -O3 -g
 
-ifeq ($(MPI), 1)
-  CXX = mpicxx
-  CXXFLAGS += -DEXAMINIMD_ENABLE_MPI
-else
-  ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
-    CXX = $(KOKKOS_PATH)/bin/nvcc_wrapper
-  else
-    CXX = g++
-  endif
-endif
+CXX = $(KOKKOS_PATH)/bin/nvcc_wrapper
+CXXFLAGS += -I$(MPI_PATH)/include -DEXAMINIMD_ENABLE_MPI
 
-LINK = ${CXX}
+LINK = mpicxx
 
 KOKKOS_OPTIONS=aggressive_vectorization
 
 DEPFLAGS = -M
 
 vpath %.cpp $(EXAMINIMD_PATH)/src
-SRC =  $(wildcard $(EXAMINIMD_PATH)/src/*.cpp) 
-HEADERS = $(wildcard $(EXAMINIMD_PATH)/src/*.h) 
+SRC =  $(wildcard $(EXAMINIMD_PATH)/src/*.cpp)
+HEADERS = $(wildcard $(EXAMINIMD_PATH)/src/*.h)
 CXXFLAGS += -I$(EXAMINIMD_PATH)/src
 
 vpath %.cpp $(EXAMINIMD_PATH)/src/force_types
@@ -72,7 +62,7 @@ build: $(EXE)
 $(EXE): $(OBJ) $(KOKKOS_LINK_DEPENDS)
 	$(LINK) $(KOKKOS_LDFLAGS) $(LINKFLAGS) $(EXTRA_PATH) $(OBJ) $(KOKKOS_LIBS) $(LIB) -o $(EXE)
 
-clean: kokkos-clean 
+clean: kokkos-clean
 	rm -f *.o $(EXE)
 
 # Compilation rules
